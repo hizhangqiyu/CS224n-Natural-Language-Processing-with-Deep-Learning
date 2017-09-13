@@ -21,6 +21,8 @@ def softmax(x):
     """
 
     ### YOUR CODE HERE
+    orig_shape = x.shape
+
     if len(x.shape) > 1:
         shiftx = x - np.amax(x, axis=1)[:,None]
         exps = np.exp(shiftx)
@@ -29,6 +31,8 @@ def softmax(x):
         shiftx = x - np.amax(x)
         exps = np.exp(shiftx)
         x = exps / np.sum(exps)
+        
+    assert x.shape == orig_shape
     ### END YOUR CODE
     
     return x
