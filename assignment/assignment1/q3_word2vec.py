@@ -66,7 +66,7 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     cost = - np.sum(np.log(y_[target])) # mean of cost will be calculated outside of this function
     softmaxGradient = y_ - y
     grad = np.outer(softmaxGradient, predicted)
-    gradPred = np.sum(softmaxGradient * outputVectors.T, 1)
+    gradPred = np.dot(softmaxGradient.reshape(1,5), outputVectors).flatten()
     ### END YOUR CODE
 
     return cost, gradPred, grad
