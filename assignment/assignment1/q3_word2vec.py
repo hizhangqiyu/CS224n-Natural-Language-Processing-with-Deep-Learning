@@ -66,7 +66,7 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     cost = - np.sum(np.log(y_[target])) # mean of cost will be calculated outside of this function
     softmaxGradient = y_ - y
     grad = np.outer(softmaxGradient, predicted)
-    gradPred = np.dot(softmaxGradient.reshape(1,5), outputVectors).flatten()
+    gradPred = np.dot(softmaxGradient[None, :], outputVectors).flatten()
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -104,23 +104,24 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     indices.extend(getNegativeSamples(target, dataset, K))
 
     ### YOUR CODE HERE
-    random_sample = []
-    while len(random_sample) < K:
-        pick_idx = dataset.sampleTokenIdx()
-        if pick_idx != target:
-            random_sample.append(pick_idx)
-    sample_vectors = outputVectors[random_sample, :]
-    target_pred = outputVectors[target].dot(predicted)
-    sample_pred = sample_vectors.dot(predicted)
-    cost = - (np.log(sigmoid(target_pred)) +
-              np.sum(np.log(sigmoid(-sample_pred))))
+    randomSample = []
+    while len(randomSample) < K:
+        pickIndex = dataset.sampleTokenIdx()
+        if pickIndex != target:
+            randomSample.append(pickIndex)
+            
+    sampleVectors = outputVectors[randomSample, :]
+    targetPred = outputVectors[target].dot(predicted)
+    samplePred = sampleVectors.dot(predicted)
+    cost = - (np.log(sigmoid(targetPred)) +
+              np.sum(np.log(sigmoid(-samplePred))))
 
-    gradPred = - sigmoid(- target_pred)*outputVectors[target] + np.dot(
-        sigmoid(sample_pred), sample_vectors)
+    gradPred = - sigmoid(- targetPred)*outputVectors[target] + np.dot(
+        sigmoid(samplePred), sampleVectors)
 
     grad = np.zeros(outputVectors.shape)
-    grad[target] = - sigmoid(- target_pred) * predicted
-    counter = Counter(random_sample)
+    grad[target] = - sigmoid(- targetPred) * predicted
+    counter = Counter(randomSample)
     for i in counter.keys():
         grad[i] = counter[i]*(sigmoid(outputVectors[i].dot(predicted)) *
                               predicted)
@@ -193,18 +194,19 @@ def cbow(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
-    #raise NotImplementedError
-    gradIn = np.zeros(inputVectors.shape)
-    current_index = tokens[currentWord]
-    context_indexes = [tokens[word] for word in contextWords]
-    v_hat = np.sum(inputVectors[context_indexes], axis=0)
-    cost, input_vector_grad, gradOut = word2vecCostAndGradient(v_hat,
-                                                               current_index,
+
+    currentWordIndex = tokens[currentWord]
+    contextWordsIndexes = [tokens[word] for word in contextWords]
+    v_hat = np.sum(inputVectors[contextWordsIndexes], axis=0)
+    cost, inputVectorGrad, gradOut = word2vecCostAndGradient(v_hat,
+                                                               currentWordIndex,
                                                                outputVectors,
                                                                dataset)
-    counter = Counter(context_indexes)
+
+    counter = Counter(contextWordsIndexes)
     for i in counter.keys():
-        gradIn[i] = counter[i]*input_vector_grad
+        gradIn[i] = counter[i]*inputVectorGrad
+
     ### END YOUR CODE
 
     return cost, gradIn, gradOut
