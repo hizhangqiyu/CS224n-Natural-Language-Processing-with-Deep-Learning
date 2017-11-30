@@ -98,11 +98,13 @@ def make_windowed_data(data, start, end, window_size = 1):
     for sentence, labels in data:
     ### YOUR CODE HERE (5-20 lines)
         length = len(sentence)
-        sentence = [star] * window_size + sentence + [end] * window_size
+        sentence = [start] * window_size + sentence + [end] * window_size
+
         for index in range(length):
             position = index + window_size
             one_pair = []
-            for x in range(position - window_size, position + window_size)
+            for x in range(position - window_size, position + window_size + 1):
+                #print("sentence[%r]=%r" % (x, sentence[x]))
                 one_pair = one_pair + sentence[x]
             windowed_data.append((one_pair, labels[index]))
     ### END YOUR CODE
@@ -137,7 +139,7 @@ class WindowModel(NERModel):
         (Don't change the variable names)
         """
         ### YOUR CODE HERE (~3-5 lines)
-        self.input_placeholder = tf.placeholder(tf.int32, [None, self.n_window_features])
+        self.input_placeholder = tf.placeholder(tf.int32, [None, self.config.n_window_features])
         self.labels_placeholder = tf.placeholder(tf.int32, [None,])
         self.dropout_placeholder = tf.placeholder(tf.float32)
         ### END YOUR CODE
@@ -165,7 +167,7 @@ class WindowModel(NERModel):
         if labels_batch is None:
             feed_dict = {self.input_placeholder:inputs_batch, self.dropout_placeholder:dropout}
         else:
-            feed_dict = {self.input_placeholder:input_batch, self.labels_placeholder:labels_batch, self.dropout_placeholder:dropout}
+            feed_dict = {self.input_placeholder:inputs_batch, self.labels_placeholder:labels_batch, self.dropout_placeholder:dropout}
         ### END YOUR CODE
         return feed_dict
 
@@ -186,9 +188,10 @@ class WindowModel(NERModel):
             embeddings: tf.Tensor of shape (None, n_window_features*embed_size)
         """
         ### YOUR CODE HERE (!3-5 lines)
-                                                             
+        embeddings_temp = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.nn.embedding_lookup(embeddings_temp, self.input_placeholder)
+        embeddings = tf.reshape(embeddings, [-1, self.config.n_window_features * self.config.embed_size])                                                                                                         
         
-                                                                                                                 
         ### END YOUR CODE
         return embeddings
 
@@ -219,7 +222,23 @@ class WindowModel(NERModel):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         ### YOUR CODE HERE (~10-20 lines)
+        W = tf.get_variable("weight1",
+            shape=[self.config.n_window_features*self.config.embed_size, self.config.hidden_size],
+            initializer=tf.contrib.layers.xavier_initializer())
+        b1 = tf.get_variable("bias1", 
+            shape=[self.config.hidden_size],
+            initializer=tf.contrib.layers.xavier_initializer())
+        h = tf.nn.relu(tf.matmul(x, W) + b1)
 
+        h_drop = tf.nn.dropout(h, keep_prob=dropout_rate)
+        
+        U = tf.get_variable("weight2",
+            shape = [self.config.hidden_size, self.config.n_classes],
+            initializer=tf.contrib.layers.xavier_initializer())
+        b2 = tf.get_variable("bias2", 
+            shape=[self.config.n_classes],
+            initializer=tf.contrib.layers.xavier_initializer())
+        pred = tf.matmul(h_drop, U) + b2
         ### END YOUR CODE
         return pred
 
@@ -237,7 +256,7 @@ class WindowModel(NERModel):
             loss: A 0-d tensor (scalar)
         """
         ### YOUR CODE HERE (~2-5 lines)
-                                   
+        loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels_placeholder, logits=pred))
         ### END YOUR CODE
         return loss
 
@@ -261,7 +280,7 @@ class WindowModel(NERModel):
             train_op: The Op for training.
         """
         ### YOUR CODE HERE (~1-2 lines)
-
+        train_op = tf.train.AdamOptimizer(self.config.lr).minimize(loss)
         ### END YOUR CODE
         return train_op
 
@@ -316,7 +335,6 @@ def test_make_windowed_data():
     sentence_labels = [[1, 2, 3]]
     data = zip(sentences, sentence_labels)
     w_data = make_windowed_data(data, start=[5,0], end=[6,0], window_size=1)
-
     assert len(w_data) == sum(len(sentence) for sentence in sentences)
 
     assert w_data == [
