@@ -37,7 +37,7 @@ class Config:
     n_word_features = 2 # Number of features for every word in the input.
     window_size = 1 # The size of the window to use.
     ### YOUR CODE HERE
-    n_window_features = 0 # The total number of features used for each window.
+    n_window_features = n_word_features * (window_size * 2 + 1) # The total number of features used for each window.
     ### END YOUR CODE
     n_classes = 5
     dropout = 0.5
@@ -97,7 +97,14 @@ def make_windowed_data(data, start, end, window_size = 1):
     windowed_data = []
     for sentence, labels in data:
     ### YOUR CODE HERE (5-20 lines)
-
+        length = len(sentence)
+        sentence = [star] * window_size + sentence + [end] * window_size
+        for index in range(length):
+            position = index + window_size
+            one_pair = []
+            for x in range(position - window_size, position + window_size)
+                one_pair = one_pair + sentence[x]
+            windowed_data.append((one_pair, labels[index]))
     ### END YOUR CODE
     return windowed_data
 
@@ -130,7 +137,9 @@ class WindowModel(NERModel):
         (Don't change the variable names)
         """
         ### YOUR CODE HERE (~3-5 lines)
-
+        self.input_placeholder = tf.placeholder(tf.int32, [None, self.n_window_features])
+        self.labels_placeholder = tf.placeholder(tf.int32, [None,])
+        self.dropout_placeholder = tf.placeholder(tf.float32)
         ### END YOUR CODE
 
     def create_feed_dict(self, inputs_batch, labels_batch=None, dropout=1):
@@ -153,7 +162,10 @@ class WindowModel(NERModel):
             feed_dict: The feed dictionary mapping from placeholders to values.
         """
         ### YOUR CODE HERE (~5-10 lines)
-         
+        if labels_batch is None:
+            feed_dict = {self.input_placeholder:inputs_batch, self.dropout_placeholder:dropout}
+        else:
+            feed_dict = {self.input_placeholder:input_batch, self.labels_placeholder:labels_batch, self.dropout_placeholder:dropout}
         ### END YOUR CODE
         return feed_dict
 
@@ -175,7 +187,7 @@ class WindowModel(NERModel):
         """
         ### YOUR CODE HERE (!3-5 lines)
                                                              
-                                  
+        
                                                                                                                  
         ### END YOUR CODE
         return embeddings
